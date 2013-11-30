@@ -24,8 +24,8 @@ endif
 if !exists("b:did_python_init")
     let b:did_python_init = 0
 
-    if !has('python')
-        " the pyflakes.vim plugin requires Vim to be compiled with +python
+    if !has('python3')
+        " the pyflakes.vim plugin requires Vim to be compiled with +python3
         finish
     endif
 
@@ -34,7 +34,7 @@ if !exists('g:pyflakes_use_quickfix')
 endif
 
 
-    python << EOF
+    python3 << EOF
 import vim
 import os.path
 import sys
@@ -62,8 +62,6 @@ class SyntaxError(messages.Message):
     def __init__(self, filename, lineno, col, message):
         messages.Message.__init__(self, filename, loc(lineno, col))
         self.message_args = (message,)
-        # fix 某些情况缺少lineno导致异常
-        self.lineno = lineno
 
 class blackhole(object):
     write = flush = lambda *a, **k: None
@@ -74,7 +72,6 @@ def check(buffer):
 
     # shebang usually found at the top of the file, followed by source code encoding marker.
     # assume everything else that follows is encoded in the encoding.
-    encoding_found = False
     for n, line in enumerate(contents):
         if n >= 2:
             break
@@ -83,10 +80,6 @@ def check(buffer):
             break
 
     contents = '\n'.join(contents) + '\n'
-
-    vimenc = vim.eval('&encoding')
-    if vimenc:
-        contents = contents.decode(vimenc)
 
     builtins = set(['__file__'])
     try:
@@ -104,7 +97,9 @@ def check(buffer):
     except:
         try:
             value = sys.exc_info()[1]
-            lineno, offset, line = value[1][1:]
+            lineno = value.lineno
+            offset = value.offset
+            line = value.text
         except IndexError:
             lineno, offset, line = 1, 0, ''
         if line and line.endswith("\n"):
@@ -230,14 +225,14 @@ if !exists("*s:RunPyflakes")
         else
             let b:cleared = 1
         endif
-        
+
         let b:matched = []
         let b:matchedlines = {}
 
         let b:qf_list = []
         let b:qf_window_count = -1
-        
-        python << EOF
+
+        python3 << EOF
 for w in check(vim.current.buffer):
     if not isinstance(w.lineno, int):
         lineno = str(w.lineno.lineno)
@@ -248,7 +243,7 @@ for w in check(vim.current.buffer):
     vim.command("let s:matchDict['lineNum'] = " + lineno)
     vim.command("let s:matchDict['message'] = '%s'" % vim_quote(w.message % w.message_args))
     vim.command("let b:matchedlines[" + lineno + "] = s:matchDict")
-    
+
     vim.command("let l:qf_item = {}")
     vim.command("let l:qf_item.bufnr = bufnr('%')")
     vim.command("let l:qf_item.filename = expand('%')")
@@ -328,4 +323,3 @@ if !exists('*s:ClearPyflakes')
         let b:cleared = 1
     endfunction
 endif
-
