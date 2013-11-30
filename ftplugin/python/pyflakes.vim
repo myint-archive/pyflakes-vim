@@ -57,7 +57,7 @@ class loc(object):
         self.lineno = lineno
         self.col_offset = col
 
-class SyntaxError(messages.Message):
+class SyntaxMessage(messages.Message):
     message = 'could not compile: %s'
     def __init__(self, filename, lineno, col, message):
         messages.Message.__init__(self, filename, loc(lineno, col))
@@ -105,7 +105,7 @@ def check(buffer):
         if line and line.endswith("\n"):
             line = line[:-1]
 
-        return [SyntaxError(filename, lineno, offset, str(value))]
+        return [SyntaxMessage(filename, lineno, offset, str(value))]
     else:
         # pyflakes looks to _MAGIC_GLOBALS in checker.py to see which
         # UndefinedNames to ignore
@@ -251,7 +251,7 @@ for w in check(vim.current.buffer):
     vim.command("let l:qf_item.text = '%s'" % vim_quote(w.message % w.message_args))
     vim.command("let l:qf_item.type = 'E'")
 
-    if getattr(w, 'col', None) is None or isinstance(w, SyntaxError):
+    if getattr(w, 'col', None) is None or isinstance(w, SyntaxMessage):
         # without column information, just highlight the whole line
         # (minus the newline)
         vim.command(r"let s:mID = matchadd('PyFlakes', '\%" + lineno + r"l\n\@!')")
